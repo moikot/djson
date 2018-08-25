@@ -3,6 +3,7 @@
 [![Build Status](https://travis-ci.com/moikot/djson.svg?branch=master)](https://travis-ci.com/moikot/djson)
 [![Go Report Card](https://goreportcard.com/badge/github.com/moikot/djson)](https://goreportcard.com/report/github.com/moikot/djson)
 [![Coverage Status](https://coveralls.io/repos/github/moikot/djson/badge.svg?branch=master)](https://coveralls.io/github/moikot/djson?branch=master)
+[![GoDoc](https://godoc.org/github.com/moikot/djson?status.svg)](https://godoc.org/github.com/moikot/djson)
 
 DJSON provides you with a simple way to convert a sting to an object.
 
