@@ -211,14 +211,14 @@ map[string]interface{}{
 },
 ```
 
-Strings enclosed by a single quote character `'''` require less escaping since only one character has special meaning in the context of such strings, it is a single quote character `'''`. You can escape this character in the same way as you escape other ones in case of values and map keys, by prefixing it with a backslash `'\'`, so that string `key='part1\'part2'` will be unmarshaled as:
+Strings enclosed by a single quote character `'''` require less escaping since only one character has special meaning in context of such strings, it is a single quote character `'''`. You can escape this character in the same way as you escape other ones, by prefixing it with a backslash `'\'`, so that string `key='part1\'part2'` will be unmarshaled as:
 ```go
 map[string]interface{}{
   "key": "part1'part2",
 },
 ```
 
-Another way to provide a string value is using a verbatim string.A verbatim string starts with `'@'` and terminates at the input string end. It means that you do not need to escape anything, but it also means that you will not be able to specify several key-value pairs in one input string separating them by a comma character.
+Another way to provide a string value is using a verbatim string. A verbatim string starts with `'@'` and terminates at the input string end. It means that you do not need to escape anything, but it also means that you will not be able to specify several key-value pairs in one input string separating them by a comma character.
 
 In the example `key=@'val',` a verbatim string is used to provide a value, and despite the trailing comma, all the characters after `'@'` are considered as part of the value provided so that the expression will be deserialized to:
 ```go
