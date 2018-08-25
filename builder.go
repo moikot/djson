@@ -49,11 +49,11 @@ func (b *mapBuilder) newMapBuilder(key string) builder {
 func (b *mapBuilder) newArrayBuilder(index int) builder {
 	if v, ok := b.m[b.key]; ok {
 		if a, ok := v.([]interface{}); ok {
-			return &arraySetter{a: a, index: index, parent: b}
+			return &arrayBuilder{a: a, index: index, parent: b}
 		}
 	}
 	a := []interface{}{}
-	return &arraySetter{a: a, index: index, parent: b}
+	return &arrayBuilder{a: a, index: index, parent: b}
 }
 
 func (b *mapBuilder) set(val interface{}) {
@@ -61,39 +61,33 @@ func (b *mapBuilder) set(val interface{}) {
 	b.parent.set(b.m)
 }
 
-type arraySetter struct {
+type arrayBuilder struct {
 	a      []interface{}
 	index  int
 	parent builder
 }
 
-func (b *arraySetter) newMapBuilder(key string) builder {
+func (b *arrayBuilder) newMapBuilder(key string) builder {
 	if len(b.a) >= b.index+1 {
 		if m, ok := b.a[b.index].(map[string]interface{}); ok {
 			return &mapBuilder{m: m, key: key, parent: b}
 		}
-	} else {
-		add := b.index + 1 - len(b.a)
-		b.a = append(b.a, make([]interface{}, add)...)
 	}
 	m := map[string]interface{}{}
 	return &mapBuilder{m: m, key: key, parent: b}
 }
 
-func (b *arraySetter) newArrayBuilder(index int) builder {
+func (b *arrayBuilder) newArrayBuilder(index int) builder {
 	if len(b.a) >= b.index+1 {
 		if a, ok := b.a[b.index].([]interface{}); ok {
-			return &arraySetter{a: a, index: index, parent: b}
+			return &arrayBuilder{a: a, index: index, parent: b}
 		}
-	} else {
-		add := b.index + 1 - len(b.a)
-		b.a = append(b.a, make([]interface{}, add)...)
 	}
 	var a []interface{}
-	return &arraySetter{a: a, index: index, parent: b}
+	return &arrayBuilder{a: a, index: index, parent: b}
 }
 
-func (b *arraySetter) set(val interface{}) {
+func (b *arrayBuilder) set(val interface{}) {
 	if len(b.a) < b.index+1 {
 		add := b.index + 1 - len(b.a)
 		b.a = append(b.a, make([]interface{}, add)...)
