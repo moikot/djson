@@ -91,6 +91,27 @@ func Test_Lex_Succeeds(t *testing.T) {
 				newToken(tokenString, 4, "'value'"),
 				newToken(tokenEnd, 11, ""),
 			}),
+		newTestCase("a string can contain a comma", "key='val1,val2'",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenString, 4, "'val1,val2'"),
+				newToken(tokenEnd, 15, ""),
+			}),
+		newTestCase("a string containing escaped single quote", "key='val1\\'val2'",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenString, 4, "'val1'val2'"),
+				newToken(tokenEnd, 16, ""),
+			}),
+		newTestCase("escaping unescapable in a string", "key='val1\\-val2'",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenString, 4, "'val1\\-val2'"),
+				newToken(tokenEnd, 16, ""),
+			}),
 		newTestCase("escaping comma in a value", "key=part1\\,part2",
 			[]token{
 				newToken(tokenMapKey, 0, "key"),

@@ -258,7 +258,7 @@ func lexNextArrayValue(l *lex) stateFunction {
 func (l *lex) lexValue(nextLex stateFunction) stateFunction {
 	switch ch := l.read(); {
 	case ch == '\'':
-		l.scanValue()
+		l.scanString()
 	case isRightValueChar(ch):
 		l.scanValue()
 		l.emit(tokenValue)
@@ -340,6 +340,26 @@ Loop:
 		case isRightValueChar(r):
 		default:
 			break Loop
+		}
+	}
+	l.unread()
+}
+
+func (l *lex) scanString() {
+Loop:
+	for {
+		switch r := l.read(); r {
+		case end, '\'':
+			break Loop
+		case '\\':
+			switch ch := l.peek(); ch {
+			case '\'':
+				l.skipLast()
+				l.read()
+			default:
+				l.read()
+			}
+		default:
 		}
 	}
 	l.unread()
