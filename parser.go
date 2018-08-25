@@ -36,16 +36,16 @@ func (p *parser) nextToken() token {
 
 // The expression is: (key=[value])[,(key=[value])]
 func (p *parser) parse() (map[string]interface{}, error) {
-	s := newRootBuilder()
+	builder := newRootBuilder()
 	for {
 		// Expecting a map at the top level
-		err := p.readMap(s)
+		err := p.readMap(builder)
 		if err != nil {
 			return nil, err
 		}
 		switch tok := p.nextToken(); tok.TokenType {
 		case tokenEnd:
-			return s.get(), nil
+			return builder.get(), nil
 		case tokenNextKey:
 			continue
 		default:
@@ -54,7 +54,7 @@ func (p *parser) parse() (map[string]interface{}, error) {
 	}
 }
 
-func (p *parser) readMap(s builder) error {
+func (p *parser) readMap(b builder) error {
 	var key string
 	switch tok := p.nextToken(); tok.TokenType {
 	case tokenMapKey:
@@ -62,28 +62,28 @@ func (p *parser) readMap(s builder) error {
 	default:
 		return tokenToError(tok)
 	}
-	return p.readLeftValue(s.newMapBuilder(key))
+	return p.readLeftValue(b.newMapBuilder(key))
 }
 
-func (p *parser) readLeftValue(s builder) error {
+func (p *parser) readLeftValue(b builder) error {
 	switch tok := p.nextToken(); tok.TokenType {
 	case tokenMapKeySeparator:
-		return p.readMap(s)
+		return p.readMap(b)
 	case tokenArrayIndexStart:
-		return p.readArray(s)
+		return p.readArray(b)
 	case tokenAssignment:
 		val, err := p.readRightValue()
 		if err != nil {
 			return err
 		}
-		s.set(val)
+		b.set(val)
 	default:
 		return tokenToError(tok)
 	}
 	return nil
 }
 
-func (p *parser) readArray(s builder) (err error) {
+func (p *parser) readArray(b builder) (err error) {
 	var index int
 	switch tok := p.nextToken(); tok.TokenType {
 	case tokenArrayIndex:
@@ -101,7 +101,7 @@ func (p *parser) readArray(s builder) (err error) {
 		return tokenToError(tok)
 	}
 
-	return p.readLeftValue(s.newArrayBuilder(index))
+	return p.readLeftValue(b.newArrayBuilder(index))
 }
 
 func (p *parser) readRightValue() (interface{}, error) {
