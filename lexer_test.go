@@ -147,6 +147,27 @@ func Test_Lex_Succeeds(t *testing.T) {
 				newToken(tokenValue, 4, "part1\\-part2"),
 				newToken(tokenEnd, 16, ""),
 			}),
+		newTestCase("verbatim string with single quotes", "key=@'val'",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenVerbatimString, 4, "'val'"),
+				newToken(tokenEnd, 10, ""),
+			}),
+		newTestCase("verbatim string with commas", "key=@,val,",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenVerbatimString, 4, ",val,"),
+				newToken(tokenEnd, 10, ""),
+			}),
+		newTestCase("verbatim string with curly brackets", "key=@{val}",
+			[]token{
+				newToken(tokenMapKey, 0, "key"),
+				newToken(tokenAssignment, 3, "="),
+				newToken(tokenVerbatimString, 4, "{val}"),
+				newToken(tokenEnd, 10, ""),
+			}),
 		newTestCase("two key-value pairs", "key1=val1,key2=val2",
 			[]token{
 				newToken(tokenMapKey, 0, "key1"),

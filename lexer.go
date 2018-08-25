@@ -55,6 +55,7 @@ const (
 	tokenAssignment                        // Assignment operator '='
 	tokenValue                             // A value
 	tokenString                            // A string value
+	tokenVerbatimString                    // A verbatim string
 	tokenNextKey                           // A next key token ','
 	tokenValueArrayStart                   // An array start '{'
 	tokenValueArrayFinish                  // An array finish '}'
@@ -74,6 +75,7 @@ var (
 		tokenAssignment:       "tokenAssignment",
 		tokenValue:            "tokenValue",
 		tokenString:           "tokenString",
+		tokenVerbatimString:   "tokenVerbatimString",
 		tokenNextKey:          "tokenNextKey",
 		tokenValueArrayStart:  "tokenValueArrayStart",
 		tokenValueArrayFinish: "tokenValueArrayFinish",
@@ -212,6 +214,9 @@ func lexRightValue(l *lex) stateFunction {
 	case ch == end:
 		l.emit(tokenEnd)
 		return nil
+	case ch == '@':
+		l.skipLast()
+		return lexVerbatimString
 	case ch == '{':
 		l.emit(tokenValueArrayStart)
 		return lexArrayValue
@@ -224,6 +229,22 @@ func lexRightValue(l *lex) stateFunction {
 	default:
 		return l.error("unexpected %v, expecting '{', ',', a value or the end", ch)
 	}
+}
+
+func lexVerbatimString(l *lex) stateFunction {
+Loop:
+	for {
+		switch r := l.read(); r {
+		case end:
+			break Loop
+		default:
+		}
+	}
+	l.unread()
+	l.emit(tokenVerbatimString)
+	l.read()
+	l.emit(tokenEnd)
+	return nil
 }
 
 func lexArrayValue(l *lex) stateFunction {

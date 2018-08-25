@@ -41,6 +41,12 @@ func Test_Parser_Succeeds(t *testing.T) {
 			},
 		),
 		newParserTestCase(
+			"a verbatim string", "key=@{'true'},",
+			map[string]interface{}{
+				"key": "{'true'},",
+			},
+		),
+		newParserTestCase(
 			"an integer value", "key=1000",
 			map[string]interface{}{
 				"key": int64(1000),

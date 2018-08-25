@@ -112,6 +112,8 @@ func (p *parser) readRightValue() (interface{}, error) {
 		return tryParse(tok.value), nil
 	case tokenString:
 		return strings.Trim(tok.value, "'"), nil
+	case tokenVerbatimString:
+		return tok.value, nil
 	case tokenValueArrayStart:
 		return p.readValuesArray()
 	default:
