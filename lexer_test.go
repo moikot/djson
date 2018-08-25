@@ -366,7 +366,7 @@ func Test_Lex_Drain(t *testing.T) {
 }
 
 // Every token type should have a string representation.
-// This is needed for producing readable error messages
+// It is needed for producing readable error messages
 // in case of a test failure.
 func Test_tokenType_String(t *testing.T) {
 	i := 0
