@@ -16,7 +16,7 @@ map[string]interface{}{
 
 ## Why?
 
-You might find DJSON useful in a case when you need to pass a parameter into a program for changing some part of a JSON defined elsewhere. 
+You might find DJSON useful in a case when you need to pass a parameter into a program for changing some part of a JSON defined elsewhere.
 DJSON parsing is similar to Helm's `--set` and `--set-string` parameters parsing combined ([see here](https://github.com/helm/helm/blob/master/docs/using_helm.md)).
 
 ## Installation
@@ -32,7 +32,7 @@ package main
 
 import (
 	"log"
-	
+
 	"github.com/moikot/djson"
 )
 
@@ -118,7 +118,7 @@ map[string]interface{}{
     "val2",
   },
 },
-``` 
+```
 
 In addition, instead of setting array values one by one, you may choose to specify an array as the value you set. For example `key={val1,val2}` will be converted to:
 ```go
@@ -130,7 +130,7 @@ map[string]interface{}{
 },
 ```
 
-There is a difference between providing an array value and specifying values in an array one by one using indexes. In the former case, you completely override the destination array. 
+There is a difference between providing an array value and specifying values in an array one by one using indexes. In the former case, you completely override the destination array.
 
 If you skip some values in the array you provide as a value, those elements will be replaced by empty strings, e.g. `key={val1,,val2}` will be converted to:
 ```go
@@ -186,9 +186,9 @@ map[string]interface{}{
 },
 ```      
 
-### Escaping 
+### Escaping
 
-Some characters have special meaning in the map keys and value definitions. For example, characters `'.'`, `'['`, `']'` and `'='` cannot be directly used in map keys because they have special meaning. E.g. character `'.'` separates map keys and if you define `part1.part2=val`, it will be converted to:
+Some characters have special meaning in the map keys and value definitions. For example, characters `'.'`, `'['`, `']'` and `'='` cannot be directly used in map keys because it separates map keys and if you define `part1.part2=val`, it will be converted to:
 ```go
 map[string]interface{}{
   "part1": map[string]interface{}{
@@ -197,7 +197,7 @@ map[string]interface{}{
 },
 ```   
 
-But if you escape `'.'` using `'\'` character, input string `part1\.part2=val` will be converted to:
+But if you escape `'.'` using a backslash character `'\'`, input string `part1\.part2=val` will be converted to:
 ```go
 map[string]interface{}{
   "part1.part2": "val",
@@ -208,5 +208,21 @@ The same rule applies to the values, where symbols `','`, `'{'`, `'}'` and `'''`
 ```go
 map[string]interface{}{
   "key": "{val}",
+},
+```
+
+Strings enclosed by a single quote character `'''` require less escaping since only one character has special meaning in the context of such strings, it is a single quote character `'''`. You can escape this character in the same way as you escape other ones in case of values and map keys, by prefixing it with a backslash `'\'`, so that string `key='part1\'part2'` will be unmarshaled as:
+```go
+map[string]interface{}{
+  "key": "part1'part2",
+},
+```
+
+Another way to provide a string value is using a verbatim string.A verbatim string starts with `'@'` and terminates at the input string end. It means that you do not need to escape anything, but it also means that you will not be able to specify several key-value pairs in one input string separating them by a comma character.
+
+In the example `key=@'val',` a verbatim string is used to provide a value, and despite the trailing comma, all the characters after `'@'` are considered as part of the value provided so that the expression will be deserialized to:
+```go
+map[string]interface{}{
+  "key": "'val',",
 },
 ```
