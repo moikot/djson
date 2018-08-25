@@ -45,7 +45,7 @@ func (r strRune) String() string {
 var end = strRune(0)
 
 const (
-	tokenEnd              tokenType = iota // The end of string
+	tokenEnd              tokenType = iota // The end of a string
 	tokenError                             // An error occurred
 	tokenMapKey                            // A map key
 	tokenMapKeySeparator                   // A map key separator '.'
@@ -59,7 +59,7 @@ const (
 	tokenValueArrayStart                   // An array start '{'
 	tokenValueArrayFinish                  // An array finish '}'
 	tokenNextValue                         // A next value ','
-	tokenUnknown                           // An unknown token
+	tokenUnknown                           // An unknown token, should be the last one
 )
 
 var (
@@ -255,14 +255,14 @@ func lexNextArrayValue(l *lex) stateFunction {
 	}
 }
 
-func (l *lex) lexValue(returnTo stateFunction) stateFunction {
+func (l *lex) lexValue(nextLex stateFunction) stateFunction {
 	switch ch := l.read(); {
 	case ch == '\'':
 		l.scanValue()
 	case isRightValueChar(ch):
 		l.scanValue()
 		l.emit(tokenValue)
-		return returnTo
+		return nextLex
 	default:
 		return l.error("unexpected %v, expecting a value or '''", ch)
 	}
@@ -270,7 +270,7 @@ func (l *lex) lexValue(returnTo stateFunction) stateFunction {
 	switch ch := l.read(); {
 	case ch == '\'':
 		l.emit(tokenString)
-		return returnTo
+		return nextLex
 	default:
 		return l.error("unterminated string, expected ''', got %v", ch)
 	}
