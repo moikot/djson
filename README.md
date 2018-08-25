@@ -18,6 +18,37 @@ map[string]interface{}{
 
 You might find DJSON useful in a case when you need to pass a parameter into a program for changing some part of a JSON defined elsewhere. 
 
+## Installation
+
+```bash
+go get -u github.com/moikot/djson
+```
+
+## Usage
+
+```go
+package main
+
+import (
+	"log"
+	
+	"github.com/moikot/djson"
+)
+
+func main() {
+	if m, err := djson.Parse("foo=bar"); err == nil {
+		log.Printf("%v", m)
+	} else {
+		log.Printf("unable to parse: %v", err)
+	}
+}
+```
+
+The expected output is:
+```bash
+map[foo:bar]
+```
+
 ## Syntax  
 
 ### Maps
