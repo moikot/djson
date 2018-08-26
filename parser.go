@@ -7,17 +7,17 @@ import (
 	"strings"
 )
 
-// Parse parses the input string and converts it into a map.
-func Parse(str string) (map[string]interface{}, error) {
+// Unmarshal converts the input string into a map.
+func Unmarshal(str string, m map[string]interface{}) error {
 	parser := newParser(str)
-	m, err := parser.parse()
+	err := parser.parse(m)
 	if err != nil {
 		parser.lex.drain()
 		parser.lex = nil
-		return nil, err
+		return err
 	}
 	parser.lex = nil
-	return m, nil
+	return nil
 }
 
 type parser struct {
@@ -35,26 +35,26 @@ func (p *parser) nextToken() token {
 }
 
 // The expression is: (key=[value])[,(key=[value])]
-func (p *parser) parse() (map[string]interface{}, error) {
-	builder := newRootBuilder()
+func (p *parser) parse(m map[string]interface{}) error {
+	builder := newRootBuilder(m)
 	for {
 		// Expecting a map at the top level
 		err := p.readMap(builder)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		switch tok := p.nextToken(); tok.TokenType {
 		case tokenEnd:
-			return builder.get(), nil
+			return nil
 		case tokenNextKey:
 			continue
 		default:
-			return nil, tokenToError(tok)
+			return tokenToError(tok)
 		}
 	}
 }
 
-func (p *parser) readMap(b builder) error {
+func (p *parser) readMap(b mapBuilderFactory) error {
 	var key string
 	switch tok := p.nextToken(); tok.TokenType {
 	case tokenMapKey:

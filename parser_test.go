@@ -213,14 +213,15 @@ func Test_Parser_Succeeds(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		result, err := Parse(test.input)
+		m := map[string]interface{}{}
+		err := Unmarshal(test.input, m)
 		if err != nil {
 			t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\tsuccess\ngot:\n\t%+v",
 				test.desc, test.input, err.Error())
 		} else {
-			if !reflect.DeepEqual(result, test.expected) {
+			if !reflect.DeepEqual(m, test.expected) {
 				t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\t%+v\ngot:\n\t%+v",
-					test.desc, test.input, test.expected, result)
+					test.desc, test.input, test.expected, m)
 			}
 		}
 	}
@@ -237,6 +238,27 @@ func newParserErrorTestCase(desc, input, expected string) parserErrorTestCase {
 		desc:     desc,
 		input:    input,
 		expected: expected,
+	}
+}
+
+func Test_Parser_Accumulates_To_Input_Map(t *testing.T) {
+	m := map[string]interface{}{}
+	err := Unmarshal("key1=val1", m)
+	if err != nil {
+		t.Error(err)
+	}
+	err = Unmarshal("key2=val2", m)
+	if err != nil {
+		t.Error(err)
+	}
+
+	expected := map[string]interface{}{
+		"key1": "val1",
+		"key2": "val2",
+	}
+
+	if !reflect.DeepEqual(m, expected) {
+		t.Errorf("expected:\n\t%+v\ngot:\n\t%+v", expected, m)
 	}
 }
 
@@ -281,7 +303,8 @@ func Test_Parser_Fails(t *testing.T) {
 	}
 
 	for _, test := range testCases {
-		_, err := Parse(test.input)
+		m := map[string]interface{}{}
+		err := Unmarshal(test.input, m)
 		if err == nil {
 			t.Errorf("\nIn the case of %s \"%s\"\nexpected error:\n\t%+v\ngot:\n\tsuccess",
 				test.desc, test.input, test.expected)

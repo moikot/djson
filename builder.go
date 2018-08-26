@@ -1,39 +1,45 @@
 package djson
 
-type builder interface {
+type mapBuilderFactory interface {
 	newMapBuilder(key string) builder
+}
+
+type arrayBuilderFactory interface {
 	newArrayBuilder(index int) builder
+}
+
+type setter interface {
 	set(val interface{})
 }
 
-type rootBuilder struct {
-	// Compose with the map builder since root is a map
-	mapBuilder
+type builder interface {
+	mapBuilderFactory
+	arrayBuilderFactory
+	setter
 }
 
-func newRootBuilder() *rootBuilder {
-	b := &rootBuilder{
-		mapBuilder: mapBuilder{
-			m:   map[string]interface{}{},
-			key: "root",
-		},
+type rootBuilder struct {
+	m map[string]interface{}
+}
+
+func newRootBuilder(m map[string]interface{}) *rootBuilder {
+	return &rootBuilder{
+		m: m,
 	}
-	// Set parent to itself to intercept the final set call
-	b.parent = b
-	return b
+}
+
+func (b *rootBuilder) newMapBuilder(key string) builder {
+	return &mapBuilder{m: b.m, key: key, parent: b}
 }
 
 func (b *rootBuilder) set(val interface{}) {
-}
-
-func (b *rootBuilder) get() map[string]interface{} {
-	return b.m["root"].(map[string]interface{})
+	// Set nothing, map is passed by reference.
 }
 
 type mapBuilder struct {
 	m      map[string]interface{}
 	key    string
-	parent builder
+	parent setter
 }
 
 func (b *mapBuilder) newMapBuilder(key string) builder {
@@ -64,7 +70,7 @@ func (b *mapBuilder) set(val interface{}) {
 type arrayBuilder struct {
 	a      []interface{}
 	index  int
-	parent builder
+	parent setter
 }
 
 func (b *arrayBuilder) newMapBuilder(key string) builder {
