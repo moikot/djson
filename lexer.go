@@ -166,12 +166,12 @@ func lexMapKey(l *lex) stateFunction {
 	switch r := l.read(); {
 	case r == end:
 		return l.error("unexpected %v, expecting a map key", r)
-	case isLeftValueChar(r):
+	case isCharInSet(r, leftValueChars):
 		l.unread()
 	default:
 		return l.error("unexpected %v, expecting a map key", r)
 	}
-	l.scanMapKey()
+	l.scan(leftValueChars)
 	l.emit(tokenMapKey)
 	return lexLeftValue
 }
@@ -194,7 +194,7 @@ func lexLeftValue(l *lex) stateFunction {
 
 func lexArrayIndex(l *lex) stateFunction {
 	switch ch := l.read(); {
-	case isMapKeyIndexChar(ch):
+	case isArrayIndexChar(ch):
 	default:
 		return l.error("unexpected %v, expecting an array index", ch)
 	}
@@ -223,7 +223,7 @@ func lexRightValue(l *lex) stateFunction {
 	case ch == ',':
 		l.emit(tokenNextKey)
 		return lexMapKey
-	case isRightValueChar(ch) || ch == '\'':
+	case isCharInSet(ch, rightValueChars) || ch == '\'':
 		l.unread()
 		return l.lexValue(lexNextMapKey)
 	default:
@@ -255,7 +255,7 @@ func lexArrayValue(l *lex) stateFunction {
 	case ch == ',':
 		l.emit(tokenNextValue)
 		return lexArrayValue
-	case isRightValueChar(ch) || ch == '\'':
+	case isCharInSet(ch, rightValueChars) || ch == '\'':
 		l.unread()
 		return l.lexValue(lexNextArrayValue)
 	default:
@@ -279,9 +279,9 @@ func lexNextArrayValue(l *lex) stateFunction {
 func (l *lex) lexValue(nextLex stateFunction) stateFunction {
 	switch ch := l.read(); {
 	case ch == '\'':
-		l.scanString()
-	case isRightValueChar(ch):
-		l.scanValue()
+		l.scan(stringChars)
+	case isCharInSet(ch, rightValueChars):
+		l.scan(rightValueChars)
 		l.emit(tokenValue)
 		return nextLex
 	default:
@@ -310,7 +310,7 @@ func lexNextMapKey(l *lex) stateFunction {
 	}
 }
 
-func (l *lex) scanMapKey() {
+func (l *lex) scan(charSet map[strRune]bool) {
 Loop:
 	for {
 		switch r := l.read(); {
@@ -318,13 +318,13 @@ Loop:
 			break Loop
 		case r == '\\':
 			switch ch := l.peek(); {
-			case !isLeftValueChar(ch):
+			case !isCharInSet(ch, charSet):
 				l.skipLast()
 				l.read()
 			default:
 				l.read()
 			}
-		case isLeftValueChar(r):
+		case isCharInSet(r, charSet):
 		default:
 			break Loop
 		}
@@ -336,82 +336,39 @@ func (l *lex) scanArrayIndex() {
 Loop:
 	for {
 		switch r := l.read(); {
-		case isMapKeyIndexChar(r):
+		case isArrayIndexChar(r):
 		default:
 			break Loop
-		}
-	}
-	l.unread()
-}
-
-func (l *lex) scanValue() {
-Loop:
-	for {
-		switch r := l.read(); {
-		case r == end:
-			break Loop
-		case r == '\\':
-			switch ch := l.peek(); {
-			case !isRightValueChar(ch):
-				l.skipLast()
-				l.read()
-			default:
-				l.read()
-			}
-		case isRightValueChar(r):
-		default:
-			break Loop
-		}
-	}
-	l.unread()
-}
-
-func (l *lex) scanString() {
-Loop:
-	for {
-		switch r := l.read(); r {
-		case end, '\'':
-			break Loop
-		case '\\':
-			switch ch := l.peek(); ch {
-			case '\'':
-				l.skipLast()
-				l.read()
-			default:
-				l.read()
-			}
-		default:
 		}
 	}
 	l.unread()
 }
 
 var (
-	notLeftValueChars = map[strRune]bool{
-		'=': true,
-		'.': true,
-		'[': true,
-		']': true,
+	leftValueChars = map[strRune]bool{
+		'=': false,
+		'.': false,
+		'[': false,
+		']': false,
 	}
 
-	notRightValueChars = map[strRune]bool{
-		',':  true,
-		'{':  true,
-		'}':  true,
-		'\'': true,
+	rightValueChars = map[strRune]bool{
+		',':  false,
+		'{':  false,
+		'}':  false,
+		'\'': false,
+	}
+
+	stringChars = map[strRune]bool{
+		'\'': false,
 	}
 )
 
-func isLeftValueChar(r strRune) bool {
-	_, ok := notLeftValueChars[r]
+func isCharInSet(r strRune, stopChars map[strRune]bool) bool {
+	_, ok := stopChars[r]
 	return !ok
 }
 
-func isRightValueChar(r strRune) bool {
-	_, ok := notRightValueChars[r]
-	return !ok
-}
-
-func isMapKeyIndexChar(r strRune) bool {
+func isArrayIndexChar(r strRune) bool {
 	return unicode.IsNumber(rune(r))
 }
