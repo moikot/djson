@@ -132,12 +132,12 @@ map[string]interface{}{
 
 There is a difference between providing an array value and specifying values in an array one by one using indexes. In the former case, you completely override the destination array.
 
-If you skip some values in the array you provide as a value, those elements will be replaced by empty strings, e.g. `key={val1,,val2}` will be converted to:
+If you skip some values in the array you provide as a value, those elements will be replaced by nils, e.g. `key={val1,,val2}` will be converted to:
 ```go
 map[string]interface{}{
   "key": []interface{}{
     "val1",
-    "",
+    nil,
     "val2",
   },
 },

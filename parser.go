@@ -134,8 +134,7 @@ func (p *parser) readValuesArray() ([]interface{}, error) {
 			valueDefined = true
 		case tokenNextValue:
 			if !valueDefined {
-				// If value is not defined, add an empty string.
-				arr = append(arr, "")
+				arr = append(arr, nil)
 			}
 			valueDefined = false
 		case tokenValueArrayFinish:

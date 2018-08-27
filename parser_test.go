@@ -83,6 +83,16 @@ func Test_Parser_Succeeds(t *testing.T) {
 			map[string]interface{}{
 				"key": []interface{}{
 					"val1",
+					nil,
+					"val2",
+				},
+			},
+		),
+		newParserTestCase(
+			"an array with missing elements", "key={val1,'',val2}",
+			map[string]interface{}{
+				"key": []interface{}{
+					"val1",
 					"",
 					"val2",
 				},
