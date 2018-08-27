@@ -171,7 +171,10 @@ func lexMapKey(l *lex) stateFunction {
 	default:
 		return l.error("unexpected %v, expecting a map key", r)
 	}
-	l.scan(leftValueChars)
+	err := l.scan(leftValueChars)
+	if err != nil {
+		return l.error(err.Error())
+	}
 	l.emit(tokenMapKey)
 	return lexLeftValue
 }
@@ -282,7 +285,10 @@ func lexNextArrayValue(l *lex) stateFunction {
 
 func (l *lex) lexString(nextLex stateFunction) stateFunction {
 	// The fist single quote is in the buffer already
-	l.scan(stringChars)
+	err := l.scan(stringChars)
+	if err != nil {
+		return l.error(err.Error())
+	}
 	switch ch := l.read(); {
 	case ch == '\'':
 		l.emit(tokenString)
@@ -293,7 +299,10 @@ func (l *lex) lexString(nextLex stateFunction) stateFunction {
 }
 
 func (l *lex) lexValue(nextLex stateFunction) stateFunction {
-	l.scan(rightValueChars)
+	err := l.scan(rightValueChars)
+	if err != nil {
+		return l.error(err.Error())
+	}
 	l.emit(tokenValue)
 	return nextLex
 }
@@ -311,7 +320,7 @@ func lexNextMapKey(l *lex) stateFunction {
 	}
 }
 
-func (l *lex) scan(charSet map[strRune]bool) {
+func (l *lex) scan(charSet map[strRune]bool) error {
 Loop:
 	for {
 		switch r := l.read(); {
@@ -322,8 +331,11 @@ Loop:
 			case !isCharInSet(ch, charSet):
 				l.skipLast()
 				l.read()
-			default:
+			case ch == '\\':
+				l.skipLast()
 				l.read()
+			default:
+				return fmt.Errorf("unknown escape sequence: %v", ch)
 			}
 		case isCharInSet(r, charSet):
 		default:
@@ -331,6 +343,7 @@ Loop:
 		}
 	}
 	l.unread()
+	return nil
 }
 
 func (l *lex) scanArrayIndex() {
