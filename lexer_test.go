@@ -65,12 +65,6 @@ func Test_Lex_Succeeds(t *testing.T) {
 				newToken(tokenAssignment, 12, "="),
 				newToken(tokenEnd, 13, ""),
 			}),
-		newTestCase("escaping close square bracket ]", "part1\\]part2=",
-			[]token{
-				newToken(tokenMapKey, 0, "part1]part2"),
-				newToken(tokenAssignment, 12, "="),
-				newToken(tokenEnd, 13, ""),
-			}),
 		newTestCase("escaping unescapable in a key", "part1\\-part2=",
 			[]token{
 				newToken(tokenMapKey, 0, "part1\\-part2"),
@@ -131,13 +125,6 @@ func Test_Lex_Succeeds(t *testing.T) {
 				newToken(tokenMapKey, 0, "key"),
 				newToken(tokenAssignment, 3, "="),
 				newToken(tokenValue, 4, "part1}part2"),
-				newToken(tokenEnd, 16, ""),
-			}),
-		newTestCase("escaping a single quote in a value", "key=part1\\'part2",
-			[]token{
-				newToken(tokenMapKey, 0, "key"),
-				newToken(tokenAssignment, 3, "="),
-				newToken(tokenValue, 4, "part1'part2"),
 				newToken(tokenEnd, 16, ""),
 			}),
 		newTestCase("escaping unescapable in a value", "key=part1\\-part2",
@@ -423,20 +410,5 @@ func Test_tokenType_String(t *testing.T) {
 	str := tokenWithoutString.String()
 	if str != tokenStrings[tokenUnknown] {
 		t.Errorf("Expected string %s for a token with no string, got %s", tokenStrings[tokenUnknown], str)
-	}
-}
-
-// It is impossible to test this case indirectly since
-// all the calls to the value lexer are guarded. But for
-// the completeness we test it here.
-func Test_lexValue_UnexpectedFirstChar(t *testing.T) {
-	lex := &lex{
-		input:  ",",
-		tokens: make(chan token),
-	}
-	go lex.lexValue(nil)
-	token := <-lex.tokens
-	if token.TokenType != tokenError {
-		t.Errorf("Expected an error token, got %v", token.TokenType)
 	}
 }

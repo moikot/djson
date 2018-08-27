@@ -223,7 +223,9 @@ func lexRightValue(l *lex) stateFunction {
 	case ch == ',':
 		l.emit(tokenNextKey)
 		return lexMapKey
-	case isCharInSet(ch, rightValueChars) || ch == '\'':
+	case ch == '\'':
+		return l.lexString(lexNextMapKey)
+	case isCharInSet(ch, rightValueChars):
 		l.unread()
 		return l.lexValue(lexNextMapKey)
 	default:
@@ -255,7 +257,9 @@ func lexArrayValue(l *lex) stateFunction {
 	case ch == ',':
 		l.emit(tokenNextValue)
 		return lexArrayValue
-	case isCharInSet(ch, rightValueChars) || ch == '\'':
+	case ch == '\'':
+		return l.lexString(lexNextArrayValue)
+	case isCharInSet(ch, rightValueChars):
 		l.unread()
 		return l.lexValue(lexNextArrayValue)
 	default:
@@ -276,18 +280,9 @@ func lexNextArrayValue(l *lex) stateFunction {
 	}
 }
 
-func (l *lex) lexValue(nextLex stateFunction) stateFunction {
-	switch ch := l.read(); {
-	case ch == '\'':
-		l.scan(stringChars)
-	case isCharInSet(ch, rightValueChars):
-		l.scan(rightValueChars)
-		l.emit(tokenValue)
-		return nextLex
-	default:
-		return l.error("unexpected %v, expecting a value or '''", ch)
-	}
-
+func (l *lex) lexString(nextLex stateFunction) stateFunction {
+	// The fist single quote is in the buffer already
+	l.scan(stringChars)
 	switch ch := l.read(); {
 	case ch == '\'':
 		l.emit(tokenString)
@@ -295,6 +290,12 @@ func (l *lex) lexValue(nextLex stateFunction) stateFunction {
 	default:
 		return l.error("unterminated string, expected ''', got %v", ch)
 	}
+}
+
+func (l *lex) lexValue(nextLex stateFunction) stateFunction {
+	l.scan(rightValueChars)
+	l.emit(tokenValue)
+	return nextLex
 }
 
 func lexNextMapKey(l *lex) stateFunction {
@@ -349,14 +350,12 @@ var (
 		'=': false,
 		'.': false,
 		'[': false,
-		']': false,
 	}
 
 	rightValueChars = map[strRune]bool{
-		',':  false,
-		'{':  false,
-		'}':  false,
-		'\'': false,
+		',': false,
+		'{': false,
+		'}': false,
 	}
 
 	stringChars = map[strRune]bool{
@@ -364,8 +363,8 @@ var (
 	}
 )
 
-func isCharInSet(r strRune, stopChars map[strRune]bool) bool {
-	_, ok := stopChars[r]
+func isCharInSet(r strRune, charSet map[strRune]bool) bool {
+	_, ok := charSet[r]
 	return !ok
 }
 
