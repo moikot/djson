@@ -31,18 +31,18 @@ go get -u github.com/moikot/djson
 package main
 
 import (
-	"log"
+  "log"
 
-	"github.com/moikot/djson"
+  "github.com/moikot/djson"
 )
 
 func main() {
   m := map[string]interface{}{}
-	if err := djson.MergeValue(m, "foo=bar"); err == nil {
-		log.Printf("%v", m)
-	} else {
-		log.Printf("unable to parse: %v", err)
-	}
+  if err := djson.MergeValue(m, "foo=bar"); err == nil {
+    log.Printf("%v", m)
+  } else {
+    log.Printf("unable to parse: %v", err)
+  }
 }
 ```
 
@@ -116,7 +116,7 @@ map[string]interface{}{
 },
 ```   
 
-### Merging
+## Merging
 
 If you call sequentially call `MergeValue` and `MergeString` in any order, the result of an individual call will be merged into the map provided using some simple rules. For example, merging the following strings `key1=val1` and `key2=val2` you get the following result:
 ```go
@@ -164,7 +164,7 @@ map[string]interface{}{
 },
 ```   
 
-### Escaping
+## Escaping
 
 Some characters have special meaning in the keys definition. For example, character `'.'`  separates map keys and if you define `part1.part2=val`, it will be deserialized to:
 ```go
@@ -182,4 +182,4 @@ map[string]interface{}{
 },
 ```   
 
-The following characters can be escaped in the map keys: `'.'`, `'['` and [`]`]. If you try to escape any other character, the parsers will fail. In order to avoid the failure you can escape a backslash using another backslash in front of it `'\\'`.
+The following characters can be escaped in the map keys: `'.'`, `'['` and `']'`. If you try to escape any other character, the parsers will fail. In order to avoid the failure you can escape a backslash using another backslash in front of it `'\\'`.
