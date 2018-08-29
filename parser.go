@@ -4,54 +4,46 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 )
 
-// Unmarshal converts the input string into a map.
-func Unmarshal(str string, m map[string]interface{}) error {
-	parser := newParser(str)
-	err := parser.parse(m)
-	if err != nil {
-		parser.lex.drain()
-		parser.lex = nil
-		return err
+// MergeValue deserializes the input string and merges result to the map provided.
+func MergeValue(m map[string]interface{}, str string) error {
+	parser := &parser{
+		lex: newLex(str),
 	}
-	parser.lex = nil
-	return nil
+	parser.rightValueReader = parser.readRightValue
+	return parser.append(m, str)
+}
+
+// MergeString deserializes the input string and merges result to the map provided.
+func MergeString(m map[string]interface{}, str string) error {
+	parser := &parser{
+		lex: newLex(str),
+	}
+	parser.rightValueReader = parser.readRightString
+	return parser.append(m, str)
 }
 
 type parser struct {
-	lex *lex
+	lex              lexer
+	rightValueReader func() (interface{}, error)
 }
 
-func newParser(str string) *parser {
-	return &parser{
-		lex: newLex(str),
+func (p *parser) append(m map[string]interface{}, str string) error {
+	builder := newRootBuilder(m)
+	// Expecting a map at the top level
+	err := p.readMap(builder)
+	if err != nil {
+		p.lex.drain()
+		p.lex = nil
+		return err
 	}
+	p.lex = nil
+	return nil
 }
 
 func (p *parser) nextToken() token {
-	return <-p.lex.tokens
-}
-
-// The expression is: (key=[value])[,(key=[value])]
-func (p *parser) parse(m map[string]interface{}) error {
-	builder := newRootBuilder(m)
-	for {
-		// Expecting a map at the top level
-		err := p.readMap(builder)
-		if err != nil {
-			return err
-		}
-		switch tok := p.nextToken(); tok.TokenType {
-		case tokenEnd:
-			return nil
-		case tokenNextKey:
-			continue
-		default:
-			return tokenToError(tok)
-		}
-	}
+	return p.lex.nextToken()
 }
 
 func (p *parser) readMap(b mapBuilderFactory) error {
@@ -72,7 +64,7 @@ func (p *parser) readLeftValue(b builder) error {
 	case tokenArrayIndexStart:
 		return p.readArray(b)
 	case tokenAssignment:
-		val, err := p.readRightValue()
+		val, err := p.rightValueReader()
 		if err != nil {
 			return err
 		}
@@ -110,38 +102,19 @@ func (p *parser) readRightValue() (interface{}, error) {
 		return "", nil
 	case tokenValue:
 		return tryParse(tok.value), nil
-	case tokenString:
-		return strings.Trim(tok.value, "'"), nil
-	case tokenVerbatimString:
-		return tok.value, nil
-	case tokenValueArrayStart:
-		return p.readValuesArray()
 	default:
 		return nil, tokenToError(tok)
 	}
 }
 
-func (p *parser) readValuesArray() ([]interface{}, error) {
-	var arr []interface{}
-	var valueDefined = false
-	for {
-		switch tok := p.nextToken(); tok.TokenType {
-		case tokenValue:
-			arr = append(arr, tryParse(tok.value))
-			valueDefined = true
-		case tokenString:
-			arr = append(arr, strings.Trim(tok.value, "'"))
-			valueDefined = true
-		case tokenNextValue:
-			if !valueDefined {
-				arr = append(arr, nil)
-			}
-			valueDefined = false
-		case tokenValueArrayFinish:
-			return arr, nil
-		default:
-			return nil, tokenToError(tok)
-		}
+func (p *parser) readRightString() (interface{}, error) {
+	switch tok := p.nextToken(); tok.TokenType {
+	case tokenEnd:
+		return "", nil
+	case tokenValue:
+		return tok.value, nil
+	default:
+		return nil, tokenToError(tok)
 	}
 }
 

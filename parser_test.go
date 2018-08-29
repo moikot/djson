@@ -3,6 +3,7 @@ package djson
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"testing"
 )
 
@@ -20,54 +21,12 @@ func newParserTestCase(desc, input string, expected map[string]interface{}) pars
 	}
 }
 
-func Test_Parser_Succeeds(t *testing.T) {
-	testCases := []parserTestCase{
+var (
+	commonParserTestCases = []parserTestCase{
 		newParserTestCase(
 			"an simple key value pair", "key=val",
 			map[string]interface{}{
 				"key": "val",
-			},
-		),
-		newParserTestCase(
-			"an boolean value", "key=true",
-			map[string]interface{}{
-				"key": true,
-			},
-		),
-		newParserTestCase(
-			"a string value", "key='true'",
-			map[string]interface{}{
-				"key": "true",
-			},
-		),
-		newParserTestCase(
-			"a verbatim string", "key=@{'true'},",
-			map[string]interface{}{
-				"key": "{'true'},",
-			},
-		),
-		newParserTestCase(
-			"an integer value", "key=1000",
-			map[string]interface{}{
-				"key": int64(1000),
-			},
-		),
-		newParserTestCase(
-			"a floating point value", "key=10.01",
-			map[string]interface{}{
-				"key": float64(10.01),
-			},
-		),
-		newParserTestCase(
-			"a value array", "key={val1,true,'true',1000,10.01}",
-			map[string]interface{}{
-				"key": []interface{}{
-					"val1",
-					true,
-					"true",
-					int64(1000),
-					float64(10.01),
-				},
 			},
 		),
 		newParserTestCase(
@@ -76,59 +35,6 @@ func Test_Parser_Succeeds(t *testing.T) {
 				"key1": map[string]interface{}{
 					"key2": "val",
 				},
-			},
-		),
-		newParserTestCase(
-			"an array with missing elements", "key={val1,,val2}",
-			map[string]interface{}{
-				"key": []interface{}{
-					"val1",
-					nil,
-					"val2",
-				},
-			},
-		),
-		newParserTestCase(
-			"an array with missing elements", "key={val1,'',val2}",
-			map[string]interface{}{
-				"key": []interface{}{
-					"val1",
-					"",
-					"val2",
-				},
-			},
-		),
-		newParserTestCase(
-			"merging two root keys", "key1=val1,key2=val2",
-			map[string]interface{}{
-				"key1": "val1",
-				"key2": "val2",
-			},
-		),
-		newParserTestCase(
-			"merging with a shared root key", "foo.key1=val1,foo.key2=val2",
-			map[string]interface{}{
-				"foo": map[string]interface{}{
-					"key1": "val1",
-					"key2": "val2",
-				},
-			},
-		),
-		newParserTestCase(
-			"merging with jagged keys", "foo.key1=val1,foo.bar.key2=val2",
-			map[string]interface{}{
-				"foo": map[string]interface{}{
-					"key1": "val1",
-					"bar": map[string]interface{}{
-						"key2": "val2",
-					},
-				},
-			},
-		),
-		newParserTestCase(
-			"merging with collided keys", "foo=val1,foo=val2",
-			map[string]interface{}{
-				"foo": "val2",
 			},
 		),
 		newParserTestCase(
@@ -163,6 +69,138 @@ func Test_Parser_Succeeds(t *testing.T) {
 						"bar",
 					},
 				},
+			},
+		),
+	}
+)
+
+func Test_Value_Parser_Succeeds(t *testing.T) {
+	testCases := []parserTestCase{
+		newParserTestCase(
+			"an boolean value true", "key=true",
+			map[string]interface{}{
+				"key": true,
+			},
+		),
+		newParserTestCase(
+			"an boolean value false", "key=false",
+			map[string]interface{}{
+				"key": false,
+			},
+		),
+		newParserTestCase(
+			"an integer value 1000", "key=1000",
+			map[string]interface{}{
+				"key": int64(1000),
+			},
+		),
+		newParserTestCase(
+			"a floating point value 10.01", "key=10.01",
+			map[string]interface{}{
+				"key": float64(10.01),
+			},
+		),
+		newParserTestCase(
+			"a floating point value 0.01", "key=0.01",
+			map[string]interface{}{
+				"key": float64(0.01),
+			},
+		),
+	}
+	testCases = append(testCases, commonParserTestCases...)
+	for _, test := range testCases {
+		m := map[string]interface{}{}
+		err := MergeValue(m, test.input)
+		assertNoError(t, err, test, m)
+	}
+}
+
+func Test_String_Parser_Succeeds(t *testing.T) {
+	testCases := []parserTestCase{
+		newParserTestCase(
+			"an boolean value true", "key=true",
+			map[string]interface{}{
+				"key": "true",
+			},
+		),
+		newParserTestCase(
+			"an boolean value false", "key=false",
+			map[string]interface{}{
+				"key": "false",
+			},
+		),
+		newParserTestCase(
+			"an integer value 1000", "key=1000",
+			map[string]interface{}{
+				"key": "1000",
+			},
+		),
+		newParserTestCase(
+			"a floating point value 10.01", "key=10.01",
+			map[string]interface{}{
+				"key": "10.01",
+			},
+		),
+		newParserTestCase(
+			"a floating point value 0.01", "key=0.01",
+			map[string]interface{}{
+				"key": "0.01",
+			},
+		),
+	}
+	testCases = append(testCases, commonParserTestCases...)
+	for _, test := range testCases {
+		m := map[string]interface{}{}
+		err := MergeString(m, test.input)
+		assertNoError(t, err, test, m)
+	}
+}
+
+func assertNoError(t *testing.T, err error, test parserTestCase, m map[string]interface{}) {
+	if err != nil {
+		t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\tsuccess\ngot:\n\t%+v",
+			test.desc, test.input, err.Error())
+	} else {
+		if !reflect.DeepEqual(m, test.expected) {
+			t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\t%+v\ngot:\n\t%+v",
+				test.desc, test.input, test.expected, m)
+		}
+	}
+}
+
+func Test_Parser_Accumulates_In_Input_Map(t *testing.T) {
+	testCases := []parserTestCase{
+		newParserTestCase(
+			"merging two root keys", "key1=val1,key2=val2",
+			map[string]interface{}{
+				"key1": "val1",
+				"key2": "val2",
+			},
+		),
+		newParserTestCase(
+			"merging with a shared root key", "foo.key1=val1,foo.key2=val2",
+			map[string]interface{}{
+				"foo": map[string]interface{}{
+					"key1": "val1",
+					"key2": "val2",
+				},
+			},
+		),
+		newParserTestCase(
+			"merging with jagged keys", "foo.key1=val1,foo.bar.key2=val2",
+			map[string]interface{}{
+				"foo": map[string]interface{}{
+					"key1": "val1",
+					"bar": map[string]interface{}{
+						"key2": "val2",
+					},
+				},
+			},
+		),
+		newParserTestCase(
+			"merging with collided keys", "foo=val1,foo=val2",
+			map[string]interface{}{
+				"foo": "val2",
 			},
 		),
 		newParserTestCase(
@@ -213,7 +251,7 @@ func Test_Parser_Succeeds(t *testing.T) {
 			},
 		),
 		newParserTestCase(
-			"a value overridden by a null value", "foo[0]={val1},foo[0]=null",
+			"a value overridden by a null value", "foo[0]=val,foo[0]=null",
 			map[string]interface{}{
 				"foo": []interface{}{
 					nil,
@@ -224,15 +262,17 @@ func Test_Parser_Succeeds(t *testing.T) {
 
 	for _, test := range testCases {
 		m := map[string]interface{}{}
-		err := Unmarshal(test.input, m)
-		if err != nil {
-			t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\tsuccess\ngot:\n\t%+v",
-				test.desc, test.input, err.Error())
-		} else {
-			if !reflect.DeepEqual(m, test.expected) {
-				t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\t%+v\ngot:\n\t%+v",
-					test.desc, test.input, test.expected, m)
+		parts := strings.Split(test.input, ",")
+		for _, input := range parts {
+			err := MergeValue(m, input)
+			if err != nil {
+				t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\tsuccess\ngot:\n\t%+v",
+					test.desc, test.input, err.Error())
 			}
+		}
+		if !reflect.DeepEqual(m, test.expected) {
+			t.Errorf("\nIn the case of %s \"%s\"\nexpected:\n\t%+v\ngot:\n\t%+v",
+				test.desc, test.input, test.expected, m)
 		}
 	}
 }
@@ -248,27 +288,6 @@ func newParserErrorTestCase(desc, input, expected string) parserErrorTestCase {
 		desc:     desc,
 		input:    input,
 		expected: expected,
-	}
-}
-
-func Test_Parser_Accumulates_To_Input_Map(t *testing.T) {
-	m := map[string]interface{}{}
-	err := Unmarshal("key1=val1", m)
-	if err != nil {
-		t.Error(err)
-	}
-	err = Unmarshal("key2=val2", m)
-	if err != nil {
-		t.Error(err)
-	}
-
-	expected := map[string]interface{}{
-		"key1": "val1",
-		"key2": "val2",
-	}
-
-	if !reflect.DeepEqual(m, expected) {
-		t.Errorf("expected:\n\t%+v\ngot:\n\t%+v", expected, m)
 	}
 }
 
@@ -298,23 +317,11 @@ func Test_Parser_Fails(t *testing.T) {
 			"an array index is out of range", "foo[99999999999999999999]",
 			"strconv.Atoi: parsing \"99999999999999999999\": value out of range",
 		),
-		newParserErrorTestCase(
-			"a value is malformed", "foo=}",
-			"unexpected character: U+007D '}', expecting '{', ',', a value or the end",
-		),
-		newParserErrorTestCase(
-			"an array value is malformed", "foo={{",
-			"unexpected character: U+007B '{', expecting '}', ',' or a value",
-		),
-		newParserErrorTestCase(
-			"next key value pair is malformed", "foo={val}{",
-			"unexpected character: U+007B '{', expecting ',' or the end",
-		),
 	}
 
 	for _, test := range testCases {
 		m := map[string]interface{}{}
-		err := Unmarshal(test.input, m)
+		err := MergeValue(m, test.input)
 		if err == nil {
 			t.Errorf("\nIn the case of %s \"%s\"\nexpected error:\n\t%+v\ngot:\n\tsuccess",
 				test.desc, test.input, test.expected)
@@ -345,5 +352,50 @@ func Test_tokenToError(t *testing.T) {
 				t.Errorf("Expected \"%s\", got \"%s\"", msg, err.Error())
 			}
 		}
+	}
+}
+
+type fakeLexer struct {
+	index  int
+	tokens []token
+}
+
+func (l *fakeLexer) drain() {
+}
+
+func (l *fakeLexer) nextToken() token {
+	t := l.tokens[l.index]
+	l.index++
+	return t
+}
+
+func (l *fakeLexer) reset() {
+	l.index = 0
+}
+
+func Test_readLeftValue(t *testing.T) {
+	lexer := &fakeLexer{}
+	lexer.tokens = append(lexer.tokens, token{TokenType: tokenAssignment})
+	lexer.tokens = append(lexer.tokens, token{TokenType: tokenError, value: "error"})
+
+	parser := &parser{
+		lex: lexer,
+	}
+
+	// When readRightValue fails readLeftValue should return an error.
+	parser.rightValueReader = parser.readRightValue
+
+	err := parser.readLeftValue(nil)
+	if err.Error() != "error" {
+		t.Errorf("Expected \"%s\", got \"%s\"", "error", err.Error())
+	}
+
+	// When readRightString fails readLeftValue should return an error.
+	lexer.reset()
+	parser.rightValueReader = parser.readRightString
+
+	err = parser.readLeftValue(nil)
+	if err.Error() != "error" {
+		t.Errorf("Expected \"%s\", got \"%s\"", "error", err.Error())
 	}
 }

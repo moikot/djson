@@ -46,20 +46,14 @@ var end = strRune(0)
 
 const (
 	tokenEnd              tokenType = iota // The end of a string
-	tokenError                             // An error occurred
+	tokenError                             // An error
 	tokenMapKey                            // A map key
 	tokenMapKeySeparator                   // A map key separator '.'
-	tokenArrayIndexStart                   // An index start '['
-	tokenArrayIndexFinish                  // An index finish ']'
-	tokenArrayIndex                        // An index
+	tokenArrayIndexStart                   // An array index start '['
+	tokenArrayIndexFinish                  // An array index finish ']'
+	tokenArrayIndex                        // An array index
 	tokenAssignment                        // Assignment operator '='
 	tokenValue                             // A value
-	tokenString                            // A string value
-	tokenVerbatimString                    // A verbatim string
-	tokenNextKey                           // A next key token ','
-	tokenValueArrayStart                   // An array start '{'
-	tokenValueArrayFinish                  // An array finish '}'
-	tokenNextValue                         // A next value ','
 	tokenUnknown                           // An unknown token, should be the last one
 )
 
@@ -74,12 +68,6 @@ var (
 		tokenArrayIndex:       "tokenArrayIndex",
 		tokenAssignment:       "tokenAssignment",
 		tokenValue:            "tokenValue",
-		tokenString:           "tokenString",
-		tokenVerbatimString:   "tokenVerbatimString",
-		tokenNextKey:          "tokenNextKey",
-		tokenValueArrayStart:  "tokenValueArrayStart",
-		tokenValueArrayFinish: "tokenValueArrayFinish",
-		tokenNextValue:        "tokenNextValue",
 		tokenUnknown:          "tokenUnknown",
 	}
 )
@@ -91,7 +79,12 @@ func (t tokenType) String() string {
 	return tokenStrings[tokenUnknown]
 }
 
-func newLex(input string) *lex {
+type lexer interface {
+	drain()
+	nextToken() token
+}
+
+func newLex(input string) lexer {
 	l := &lex{
 		input:  input,
 		tokens: make(chan token),
@@ -103,6 +96,10 @@ func newLex(input string) *lex {
 func (l *lex) drain() {
 	for range l.tokens {
 	}
+}
+
+func (l *lex) nextToken() token {
+	return <-l.tokens
 }
 
 func (l *lex) read() strRune {
@@ -189,7 +186,7 @@ func lexLeftValue(l *lex) stateFunction {
 		return lexArrayIndex
 	case ch == '=':
 		l.emit(tokenAssignment)
-		return lexRightValue
+		return lexValue
 	default:
 		return l.error("unexpected %v, expecting '.', '=' or '['", ch)
 	}
@@ -212,112 +209,18 @@ func lexArrayIndex(l *lex) stateFunction {
 	}
 }
 
-func lexRightValue(l *lex) stateFunction {
-	switch ch := l.read(); {
-	case ch == end:
-		l.emit(tokenEnd)
-		return nil
-	case ch == '@':
-		l.skipLast()
-		return lexVerbatimString
-	case ch == '{':
-		l.emit(tokenValueArrayStart)
-		return lexArrayValue
-	case ch == ',':
-		l.emit(tokenNextKey)
-		return lexMapKey
-	case ch == '\'':
-		return l.lexString(lexNextMapKey)
-	case isCharInSet(ch, rightValueChars):
+func lexValue(l *lex) stateFunction {
+	var valueLength = 0
+	for r := l.read(); r != end; r = l.read() {
+		valueLength++
+	}
+	if valueLength > 0 {
 		l.unread()
-		return l.lexValue(lexNextMapKey)
-	default:
-		return l.error("unexpected %v, expecting '{', ',', a value or the end", ch)
+		l.emit(tokenValue)
+		l.read()
 	}
-}
-
-func lexVerbatimString(l *lex) stateFunction {
-Loop:
-	for {
-		switch r := l.read(); r {
-		case end:
-			break Loop
-		default:
-		}
-	}
-	l.unread()
-	l.emit(tokenVerbatimString)
-	l.read()
 	l.emit(tokenEnd)
 	return nil
-}
-
-func lexArrayValue(l *lex) stateFunction {
-	switch ch := l.read(); {
-	case ch == '}':
-		l.emit(tokenValueArrayFinish)
-		return lexNextMapKey
-	case ch == ',':
-		l.emit(tokenNextValue)
-		return lexArrayValue
-	case ch == '\'':
-		return l.lexString(lexNextArrayValue)
-	case isCharInSet(ch, rightValueChars):
-		l.unread()
-		return l.lexValue(lexNextArrayValue)
-	default:
-		return l.error("unexpected %v, expecting '}', ',' or a value", ch)
-	}
-}
-
-func lexNextArrayValue(l *lex) stateFunction {
-	switch ch := l.read(); {
-	case ch == ',':
-		l.emit(tokenNextValue)
-		return lexArrayValue
-	case ch == '}':
-		l.emit(tokenValueArrayFinish)
-		return lexNextMapKey
-	default:
-		return l.error("unexpected %v, expecting ',' or '}'", ch)
-	}
-}
-
-func (l *lex) lexString(nextLex stateFunction) stateFunction {
-	// The fist single quote is in the buffer already
-	err := l.scan(stringChars)
-	if err != nil {
-		return l.error(err.Error())
-	}
-	switch ch := l.read(); {
-	case ch == '\'':
-		l.emit(tokenString)
-		return nextLex
-	default:
-		return l.error("unterminated string, expected ''', got %v", ch)
-	}
-}
-
-func (l *lex) lexValue(nextLex stateFunction) stateFunction {
-	err := l.scan(rightValueChars)
-	if err != nil {
-		return l.error(err.Error())
-	}
-	l.emit(tokenValue)
-	return nextLex
-}
-
-func lexNextMapKey(l *lex) stateFunction {
-	switch ch := l.read(); {
-	case ch == end:
-		l.emit(tokenEnd)
-		return nil
-	case ch == ',':
-		l.emit(tokenNextKey)
-		return lexMapKey
-	default:
-		return l.error("unexpected %v, expecting ',' or the end", ch)
-	}
 }
 
 func (l *lex) scan(charSet map[strRune]bool) error {
@@ -363,16 +266,6 @@ var (
 		'=': false,
 		'.': false,
 		'[': false,
-	}
-
-	rightValueChars = map[strRune]bool{
-		',': false,
-		'{': false,
-		'}': false,
-	}
-
-	stringChars = map[strRune]bool{
-		'\'': false,
 	}
 )
 

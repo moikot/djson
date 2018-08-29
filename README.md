@@ -17,7 +17,7 @@ map[string]interface{}{
 ## Why?
 
 You might find DJSON useful in a case when you need to pass a parameter into a program for changing some part of a JSON defined elsewhere.
-DJSON parsing is similar to Helm's `--set` and `--set-string` parameters parsing combined ([see here](https://github.com/helm/helm/blob/master/docs/using_helm.md)).
+DJSON parsing is similar to Helm's `--set` and `--set-string` parameters parsing ([see here](https://github.com/helm/helm/blob/master/docs/using_helm.md)).
 
 ## Installation
 
@@ -37,7 +37,8 @@ import (
 )
 
 func main() {
-	if m, err := djson.Parse("foo=bar"); err == nil {
+  m := map[string]interface{}{}
+	if err := djson.MergeValue(m, "foo=bar"); err == nil {
 		log.Printf("%v", m)
 	} else {
 		log.Printf("unable to parse: %v", err)
@@ -52,7 +53,7 @@ map[foo:bar]
 
 ## Syntax  
 
-### Maps
+### Maps and arrays
 
 The root is always a map key in a DJSON expression. Like in the example above `key` is a root key in the `key=val` expression. However, after a root key you can define another, nested one using a dot as the key separator, so that `key1.key2=val` will be converted to:
 ```go
@@ -63,33 +64,6 @@ map[string]interface{}{
 },
 ```       
 
-You can define several key-value pairs by separating them using commas. In this case, the expressions you define can be merged into one map object. For example: `key1=val1,key2=val2` will be converted and merged to:
-```go
-map[string]interface{}{
-  "key1": "val1",
-  "key2": "val2",
-},
-```   
-
-Or you can merge a map into another one `key1=val1,key2.key3=val2` and the result will be:
-```go
-map[string]interface{}{
-  "key1": "val1",
-  "key2": map[string]interface{}{
-    "key3": "val2",
-  },
-},
-```
-
-If the case of using the same key in several key-value expressions, the rightmost one takes precedence, for example in `key1=val1,key2.key1=val2` value `val2` overrides `val` and the result will be:
-```go
-map[string]interface{}{
-  "key1": "val2",
-},
-```
-
-### Arrays
-
 Apart of the map keys you can also specify indexes of array elements where you want to set or override a value. Assuming that the root should always be a map key, you can provide `key[0]=val` and it will be converted into a map containing an array of values (one value in this particular case):
 ```go
 map[string]interface{}{
@@ -98,50 +72,6 @@ map[string]interface{}{
   },
 },
 ```
-
-If you need to compose an array from several values you can separate them one after another using a comma `','`, and `key[0]=val1,key[1]=val2` will be deserialized into:
-```go
-map[string]interface{}{
-  "key": []interface{}{
-    "val1",
-    "val2",
-  },
-},
-```
-
-If you miss some items in the array when you set your value, those values will default to nil if they are not previously defined. In this example, `key[0]=val1,key[2]=val2` index `1` is missing and the string will be converted to:
-```go
-map[string]interface{}{
-  "key": []interface{}{
-    "val1",
-    nil,
-    "val2",
-  },
-},
-```
-
-In addition, instead of setting array values one by one, you may choose to specify an array as the value you set. For example `key={val1,val2}` will be converted to:
-```go
-map[string]interface{}{
-  "key": []interface{}{
-    "val1",
-    "val2",
-  },
-},
-```
-
-There is a difference between providing an array value and specifying values in an array one by one using indexes. In the former case, you completely override the destination array.
-
-If you skip some values in the array you provide as a value, those elements will be replaced by nils, e.g. `key={val1,,val2}` will be converted to:
-```go
-map[string]interface{}{
-  "key": []interface{}{
-    "val1",
-    nil,
-    "val2",
-  },
-},
-```  
 
 You can chain array indexes and map keys in different order as long as the first item in the chain is a map key. String `key1[0].key2=val`, for example, will be deserialized to:
 ```go
@@ -156,14 +86,14 @@ map[string]interface{}{
 
 ### Values conversion
 
-DJSON parser attempts to convert strings you provide into different types. For example, string `"true"` will be automatically converted to a Boolean value `true`, and `key=true` string will be deserialized into:
+`MergeValue` always attempts to convert strings you provide into different types. For example, value `"true"` will be automatically converted to a Boolean value `true`, and `key=true` string will be deserialized into:
 ```go
 map[string]interface{}{
   "key": true,
 },
 ```      
 
-In order to supress the automatic conversion, you can enclose a value you provide into single quotes like `key='true'`, so that the value can escape the conversion.
+In order to suppress the automatic conversion, you can use `AppendString` instead and the result will be:
 ```go
 map[string]interface{}{
   "key": "true",
@@ -184,11 +114,59 @@ The `null` value is needed for representing an uninitialized value so that such 
 map[string]interface{}{
   "key": nil,
 },
-```      
+```   
+
+### Merging
+
+If you call sequentially call `MergeValue` and `MergeString` in any order, the result of an individual call will be merged into the map provided using some simple rules. For example, merging the following strings `key1=val1` and `key2=val2` you get the following result:
+```go
+map[string]interface{}{
+  "key1": "val1",
+  "key2": "val2",
+},
+```   
+
+You can also merge a map into another one. In case of `key1=val1` and `key2.key3=val2` merged, result will be:
+```go
+map[string]interface{}{
+  "key1": "val1",
+  "key2": map[string]interface{}{
+    "key3": "val2",
+  },
+},
+```
+
+If the case of using the same key in several key-value expressions, the last call takes precedence, for example, when `key1=val1` merged with `key1=val2` one after another, value `val2` overrides `val1` and the result will be:
+```go
+map[string]interface{}{
+  "key1": "val2",
+},
+```
+
+If you need to compose an array from several values you can merge the values sequentially e.g. merging `key[0]=val1` and `key[1]=val2` you will get:
+```go
+map[string]interface{}{
+  "key": []interface{}{
+    "val1",
+    "val2",
+  },
+},
+```
+
+If you miss some items in the array when you merge a value, those values will default to nil if they are not previously defined. In this example merging `key[0]=val1` and `key[2]=val2` index `1` was missed and the result will be:
+```go
+map[string]interface{}{
+  "key": []interface{}{
+    "val1",
+    nil,
+    "val2",
+  },
+},
+```   
 
 ### Escaping
 
-Some characters have special meaning in the map keys and value definitions. For example, character `'.'`  separates map keys and if you define `part1.part2=val`, it will be deserialized to:
+Some characters have special meaning in the keys definition. For example, character `'.'`  separates map keys and if you define `part1.part2=val`, it will be deserialized to:
 ```go
 map[string]interface{}{
   "part1": map[string]interface{}{
@@ -204,25 +182,4 @@ map[string]interface{}{
 },
 ```   
 
-The same rule applies to the values, where symbols `','`, `'{'` and `'}'` can be escaped using `'\'`. For example `key=\{val\}` will be deserialized to:
-```go
-map[string]interface{}{
-  "key": "{val}",
-},
-```
-
-Strings enclosed by a single quote character `'''` require less escaping since only one character has special meaning in the context of such strings, it is a single quote character `'''`. You can escape this character in the same way as you escape other ones, by prefixing it with a backslash `'\'`, so that string `key='part1\'part2'` will be unmarshaled to:
-```go
-map[string]interface{}{
-  "key": "part1'part2",
-},
-```
-
-Another way to provide a string value is using a verbatim string. A verbatim string starts with `'@'` and terminates at the input string end. It means that you do not need to escape anything, but it also means that you cannot specify several key-value pairs in one input string separating them by a comma character.
-
-In the example `key=@'val',` a verbatim string is used to provide a value, and despite the trailing comma, all the characters after `'@'` are considered as part of the value provided so that the expression will be deserialized to:
-```go
-map[string]interface{}{
-  "key": "'val',",
-},
-```
+The following characters can be escaped in the map keys: `'.'`, `'['` and [`]`]. If you try to escape any other character, the parsers will fail. In order to avoid the failure you can escape a backslash using another backslash in front of it `'\\'`.
