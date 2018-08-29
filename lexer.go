@@ -163,12 +163,12 @@ func lexMapKey(l *lex) stateFunction {
 	switch r := l.read(); {
 	case r == end:
 		return l.error("unexpected %v, expecting a map key", r)
-	case isCharInSet(r, leftValueChars):
+	case !isStopChar(r, stopLeftValueChars):
 		l.unread()
 	default:
 		return l.error("unexpected %v, expecting a map key", r)
 	}
-	err := l.scan(leftValueChars)
+	err := l.scan(stopLeftValueChars)
 	if err != nil {
 		return l.error(err.Error())
 	}
@@ -223,7 +223,7 @@ func lexValue(l *lex) stateFunction {
 	return nil
 }
 
-func (l *lex) scan(charSet map[strRune]bool) error {
+func (l *lex) scan(stopCharSet map[strRune]bool) error {
 Loop:
 	for {
 		switch r := l.read(); {
@@ -231,16 +231,13 @@ Loop:
 			break Loop
 		case r == '\\':
 			switch ch := l.peek(); {
-			case !isCharInSet(ch, charSet):
-				l.skipLast()
-				l.read()
-			case ch == '\\':
+			case isStopChar(ch, stopCharSet) || ch == '\\':
 				l.skipLast()
 				l.read()
 			default:
 				return fmt.Errorf("unknown escape sequence: %v", ch)
 			}
-		case isCharInSet(r, charSet):
+		case !isStopChar(r, stopCharSet):
 		default:
 			break Loop
 		}
@@ -262,16 +259,16 @@ Loop:
 }
 
 var (
-	leftValueChars = map[strRune]bool{
-		'=': false,
-		'.': false,
-		'[': false,
+	stopLeftValueChars = map[strRune]bool{
+		'=': true,
+		'.': true,
+		'[': true,
 	}
 )
 
-func isCharInSet(r strRune, charSet map[strRune]bool) bool {
-	_, ok := charSet[r]
-	return !ok
+func isStopChar(r strRune, stopCharSet map[strRune]bool) bool {
+	_, ok := stopCharSet[r]
+	return ok
 }
 
 func isArrayIndexChar(r strRune) bool {
