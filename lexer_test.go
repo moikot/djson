@@ -71,10 +71,6 @@ func Test_Lex_Value_Succeeds(t *testing.T) {
 				newToken(tokenAssignment, 12, "="),
 				newToken(tokenEnd, 13, ""),
 			}),
-		newTestCase("escaping unescapable in a key", "part1\\-part2=",
-			[]token{
-				newToken(tokenError, 0, "unknown escape sequence: character: U+002D '-'"),
-			}),
 		newTestCase("a simple key value assignment", "key=value",
 			[]token{
 				newToken(tokenMapKey, 0, "key"),
@@ -131,39 +127,39 @@ func Test_Lex_Fails(t *testing.T) {
 	testCases := []lexTestCase{
 		newTestCase("an empty string", "",
 			[]token{
-				newToken(tokenError, 0, "unexpected end, expecting a map key"),
+				newToken(tokenError, 0, "in position 0 got unexpected end, expecting a map key"),
 			}),
 		newTestCase("a map key with no value", "key",
 			[]token{
 				newToken(tokenMapKey, 0, "key"),
-				newToken(tokenError, 3, "unexpected end, expecting '.', '=' or '['"),
+				newToken(tokenError, 3, "in position 3 got unexpected end, expecting '.', '=' or '['"),
 			}),
 		newTestCase("an unexpected key separator", ".",
 			[]token{
-				newToken(tokenError, 0, "unexpected character: U+002E '.', expecting a map key"),
+				newToken(tokenError, 0, "in position 1 got unexpected character: U+002E '.', expecting a map key"),
 			}),
 		newTestCase("an unexpected assignment operator", "=",
 			[]token{
-				newToken(tokenError, 0, "unexpected character: U+003D '=', expecting a map key"),
+				newToken(tokenError, 0, "in position 1 got unexpected character: U+003D '=', expecting a map key"),
 			}),
 		newTestCase("an unexpected end of array index", "k[",
 			[]token{
 				newToken(tokenMapKey, 0, "k"),
 				newToken(tokenArrayIndexStart, 1, "["),
-				newToken(tokenError, 2, "unexpected end, expecting an array index"),
+				newToken(tokenError, 2, "in position 2 got unexpected end, expecting an array index"),
 			}),
 		newTestCase("an unexpected open square bracket", "k[[",
 			[]token{
 				newToken(tokenMapKey, 0, "k"),
 				newToken(tokenArrayIndexStart, 1, "["),
-				newToken(tokenError, 2, "unexpected character: U+005B '[', expecting an array index"),
+				newToken(tokenError, 2, "in position 3 got unexpected character: U+005B '[', expecting an array index"),
 			}),
 		newTestCase("an incomplete index", "key[0",
 			[]token{
 				newToken(tokenMapKey, 0, "key"),
 				newToken(tokenArrayIndexStart, 3, "["),
 				newToken(tokenArrayIndex, 4, "0"),
-				newToken(tokenError, 5, "unexpected end, expecting ']'"),
+				newToken(tokenError, 5, "in position 5 got unexpected end, expecting ']'"),
 			}),
 		newTestCase("an array index with no value", "key[0]",
 			[]token{
@@ -171,7 +167,7 @@ func Test_Lex_Fails(t *testing.T) {
 				newToken(tokenArrayIndexStart, 3, "["),
 				newToken(tokenArrayIndex, 4, "0"),
 				newToken(tokenArrayIndexFinish, 5, "]"),
-				newToken(tokenError, 6, "unexpected end, expecting '.', '=' or '['"),
+				newToken(tokenError, 6, "in position 6 got unexpected end, expecting '.', '=' or '['"),
 			}),
 		newTestCase("an unexpected key", "k1[0]k2",
 			[]token{
@@ -179,7 +175,11 @@ func Test_Lex_Fails(t *testing.T) {
 				newToken(tokenArrayIndexStart, 2, "["),
 				newToken(tokenArrayIndex, 3, "0"),
 				newToken(tokenArrayIndexFinish, 4, "]"),
-				newToken(tokenError, 5, "unexpected character: U+006B 'k', expecting '.', '=' or '['"),
+				newToken(tokenError, 5, "in position 6 got unexpected character: U+006B 'k', expecting '.', '=' or '['"),
+			}),
+		newTestCase("escaping unescapable in a key", "part1\\-part2=",
+			[]token{
+				newToken(tokenError, 0, "in position 7 got unknown escape sequence: character: U+002D '-'"),
 			}),
 	}
 

@@ -147,7 +147,7 @@ func (l *lex) error(format string, args ...interface{}) stateFunction {
 	l.tokens <- token{
 		TokenType: tokenError,
 		position:  l.start,
-		value:     fmt.Sprintf(format, args...)}
+		value:     fmt.Sprintf("in position %d got %s", l.position, fmt.Sprintf(format, args...))}
 	return nil
 }
 
@@ -235,6 +235,7 @@ Loop:
 				l.skipLast()
 				l.read()
 			default:
+				l.read()
 				return fmt.Errorf("unknown escape sequence: %v", ch)
 			}
 		case !isStopChar(r, stopCharSet):
