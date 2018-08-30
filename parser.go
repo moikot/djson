@@ -12,7 +12,7 @@ func MergeValue(m map[string]interface{}, str string) error {
 		lex: newLex(str),
 	}
 	parser.rightValueReader = parser.readRightValue
-	return parser.append(m, str)
+	return parser.merge(m, str)
 }
 
 // MergeString deserializes the input string and merges result to the map provided.
@@ -21,7 +21,7 @@ func MergeString(m map[string]interface{}, str string) error {
 		lex: newLex(str),
 	}
 	parser.rightValueReader = parser.readRightString
-	return parser.append(m, str)
+	return parser.merge(m, str)
 }
 
 type parser struct {
@@ -29,14 +29,14 @@ type parser struct {
 	rightValueReader func() (interface{}, error)
 }
 
-func (p *parser) append(m map[string]interface{}, str string) error {
+func (p *parser) merge(m map[string]interface{}, str string) error {
 	builder := newRootBuilder(m)
 	// Expecting a map at the top level
 	err := p.readMap(builder)
 	if err != nil {
 		p.lex.drain()
 		p.lex = nil
-		return err
+		return fmt.Errorf("unable to parse \"%s\", %v", str, err)
 	}
 	p.lex = nil
 	return nil

@@ -295,27 +295,27 @@ func Test_Parser_Fails(t *testing.T) {
 	testCases := []parserErrorTestCase{
 		newParserErrorTestCase(
 			"an empty string", "",
-			"unexpected end, expecting a map key",
+			"unable to parse \"\", unexpected end, expecting a map key",
 		),
 		newParserErrorTestCase(
 			"key with no value", "foo",
-			"unexpected end, expecting '.', '=' or '['",
+			"unable to parse \"foo\", unexpected end, expecting '.', '=' or '['",
 		),
 		newParserErrorTestCase(
 			"an array with no value", "foo[0]",
-			"unexpected end, expecting '.', '=' or '['",
+			"unable to parse \"foo[0]\", unexpected end, expecting '.', '=' or '['",
 		),
 		newParserErrorTestCase(
 			"an array index is not defined", "foo[",
-			"unexpected end, expecting an array index",
+			"unable to parse \"foo[\", unexpected end, expecting an array index",
 		),
 		newParserErrorTestCase(
 			"an array index is not complete", "foo[0",
-			"unexpected end, expecting ']'",
+			"unable to parse \"foo[0\", unexpected end, expecting ']'",
 		),
 		newParserErrorTestCase(
 			"an array index is out of range", "foo[99999999999999999999]",
-			"strconv.Atoi: parsing \"99999999999999999999\": value out of range",
+			"unable to parse \"foo[99999999999999999999]\", strconv.Atoi: parsing \"99999999999999999999\": value out of range",
 		),
 	}
 
