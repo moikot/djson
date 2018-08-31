@@ -144,10 +144,15 @@ func (l *lex) emit(tokenType tokenType) {
 
 // Emmit an error token, value is the error text
 func (l *lex) error(format string, args ...interface{}) stateFunction {
+	msg := fmt.Sprintf(format, args...)
+	if l.width > 0 {
+		msg = fmt.Sprintf("in position %d got %s", l.position, msg)
+	}
 	l.tokens <- token{
 		TokenType: tokenError,
 		position:  l.start,
-		value:     fmt.Sprintf("in position %d got %s", l.position, fmt.Sprintf(format, args...))}
+		value:     msg,
+	}
 	return nil
 }
 
