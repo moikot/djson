@@ -153,7 +153,7 @@ map[string]interface{}{
 },
 ```
 
-If you miss some items in the array when you merge a value, those values will default to nil if they are not previously defined. In this example merging `key[0]=val1` and `key[2]=val2` index `1` was missed and the result will be:
+If you miss some items in the array when you merge a value, those values will default to nil if they are not previously defined. In the example of merging `key[0]=val1` and `key[2]=val2` index `1` is missing and the result will be:
 ```go
 map[string]interface{}{
   "key": []interface{}{
