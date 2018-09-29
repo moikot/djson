@@ -93,7 +93,7 @@ map[string]interface{}{
 },
 ```      
 
-In order to suppress the automatic conversion, you can use `AppendString` instead and the result will be:
+In order to suppress the automatic conversion, you can use `MergeString` instead and the result will be:
 ```go
 map[string]interface{}{
   "key": "true",
