@@ -5,7 +5,7 @@
 [![Coverage Status](https://coveralls.io/repos/github/moikot/djson/badge.svg?branch=master)](https://coveralls.io/github/moikot/djson?branch=master)
 [![GoDoc](https://godoc.org/github.com/moikot/djson?status.svg)](https://godoc.org/github.com/moikot/djson)
 
-DJSON provides you with a simple way to convert a sting to an object.
+DJSON provides you with a simple way to convert a string into an object.
 
 For example, `key=val` will be converted to:
 ```go
