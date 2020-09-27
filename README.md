@@ -17,7 +17,7 @@ map[string]interface{}{
 ## Why?
 
 You might find DJSON useful in a case when you need to pass a parameter into a program for changing some part of a JSON defined elsewhere.
-DJSON parsing is similar to Helm's `--set` and `--set-string` parameters parsing ([see here](https://github.com/helm/helm/blob/master/docs/using_helm.md)).
+DJSON parsing is similar to Helm's `--set` and `--set-string` parameters parsing ([see here](https://helm.sh/docs/chart_best_practices/values)).
 
 ## Installation
 
